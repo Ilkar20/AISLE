@@ -1,62 +1,35 @@
-# backend/router.py
+# router.py
 from flask import Blueprint, request, jsonify
-from conversation_service import ConversationService
-from session_manager import SessionManager
+from conversation_service import generate_ai_response
+from session_manager import create_session, get_session, update_session
 
-bp = Blueprint("aisle", __name__)
-session_mgr = SessionManager()
-conv_service = ConversationService()
+bp = Blueprint("aisle_bp", __name__)
 
 @bp.route("/chat", methods=["POST"])
 def chat():
-    data = request.get_json() or {}
+    data = request.json
     session_id = data.get("session_id")
-    message = data.get("message", "").strip()
+    message = data.get("message", "")
 
-    # create session if missing
+    # Create session if none
     if not session_id:
-        session_id = session_mgr.create_session()
-        # initial assistant prompt (no user message)
-        res = conv_service.handle_message(session_id, "", session_mgr)
-        return jsonify(res)
+        session_id = create_session()
 
-    if not session_mgr.exists(session_id):
-        return jsonify({"error":"invalid session_id"}), 400
+    session = get_session(session_id)
 
-    # append user msg
-    if message:
-        session_mgr.append_history(session_id, "user", {"fi": message, "en": message})
+    # Generate AI prompt (simplified)
+    prompt = f"User state: {session['state']}. User says: {message}"
 
-    res = conv_service.handle_message(session_id, message, session_mgr)
-    return jsonify(res)
+    ai_reply = generate_ai_response(prompt, session_id)
 
-@bp.route("/state/<session_id>", methods=["GET"])
-def get_state(session_id):
-    """
-    Get current state and profile for a session.
-    """
-    if not session_mgr.exists(session_id):
-        return jsonify({"error": "invalid  session_id"}), 400
+    # Update session (example: advance state if onboarding done)
+    if session['state'] == "onboarding":
+        session['state'] = "theme_selection"
+
+    update_session(session_id, session)
+
     return jsonify({
-        "state": session_mgr.get_state(session_id),
-        "profile": session_mgr.get_profile(session_id)
-    }), 200
-
-@bp.route("/history/<session_id>", method=["Get"])
-def get_history(session_id):
-    """
-    Get full conversation history (multimodal entires).
-    """
-    if not session_mgr.exists(session_id):
-        return jsonify({"error": "invalid session_id"}), 400
-    return jsonify(session_mgr.get_history(session_id)), 200
-
-@bp.route("/session/<session_id>", method=["DELETE"])
-def delete_session(session_id):
-    """
-    Delete a session completely.
-    """
-    if not session_mgr.exists(session_id):
-        return jsonify({"error": "invalid session_id"}), 400
-    session_mgr.delete_session(session_id)
-    return jsonify({"delete": session_id}), 200
+        "session_id": session_id,
+        "state": session['state'],
+        "reply": ai_reply
+    })

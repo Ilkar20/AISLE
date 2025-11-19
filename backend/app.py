@@ -1,16 +1,12 @@
-# backend/app.py
+# app.py
 from flask import Flask
 from flask_cors import CORS
-from config import DEBUG, HOST, PORT
-from router import bp as aisle_bp
+from router import router
 
-def create_app():
-    app = Flask(__name__)
-    CORS(app)
-    app.register_blueprint(aisle_bp, url_prefix="/api")
-    return app
+app = Flask(__name__)
+CORS(app)
+app.register_blueprint(router)
 
 if __name__ == "__main__":
-    app = create_app()
-    print("Starting AISLE backend on http://%s:%s" % (HOST, PORT))
-    app.run(host=HOST, port=PORT, debug=DEBUG)
+    print("AISLE backend running at http://127.0.0.1:5000")
+    app.run(debug=True)
