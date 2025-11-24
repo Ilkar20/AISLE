@@ -1,15 +1,15 @@
 import requests
 import json
-from backend import config
+from config import Config
 
 
 
 class OpenRouterClient:
-    BASE_URL = config.OPENROUTER_URL
+    BASE_URL = Config.OPENROUTER_URL
 
     def __init__(self, api_key=None, model=None):
-        self.api_key = api_key or config.OPENROUTER_API_KEY
-        self.model = model or config.OPENROUTER_MODEL
+        self.api_key = api_key or Config.OPENROUTER_API_KEY
+        self.model = model or Config.OPENROUTER_MODEL
 
         if not self.api_key:
             raise ValueError("OPENROUTER_API_KEY is missing in environment variables.")

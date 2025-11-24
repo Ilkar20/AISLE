@@ -1,80 +1,54 @@
+import os
+import json
 from llm.openrouter_client import OpenRouterClient
 from prompt_manager import PromptManager
+from session_manager import SessionManager
+from utils.parser import parse_ai_response  
 
 class ConversationService:
-    """
-    Handles the AISLE conversation with the user.
-    Current scope: Onboarding phase only.
-
-    Features:
-    - Sends an introduction automatically on first access.
-    - Asks first onboarding question without user input.
-    - Maintains multi-turn conversation if history is provided.
-    """
-
     def __init__(self):
         self.llm = OpenRouterClient()
         self.prompts = PromptManager()
+        self.sessions = SessionManager()
 
-    def onboarding(self, user_message: str = None, history=None):
+    
+    def handle_message(self, user_id, user_msg):
         """
-        Run one onboarding turn.
-
-        Args:
-            user_message (str, optional): User's message. If None, triggers intro + first question.
-            history (list, optional): List of previous conversation turns (user + AI)
-
-        Returns:
-            dict: {
-                'english': English text,
-                'finnish': Finnish text,
-                'raw': raw LLM response
-            }
+        Handle user message:
+        - Build AI prompt based on user state
+        - Call model
+        - Parse response
+        - Validate
+        - Update session
         """
-        if history is None:
-            history = []
+        # Get current state
+        current_state = self.sessions.get_state(user_id)
 
-        # Load onboarding system prompt
-        system_prompt = self.prompts.load_onboarding()
+        # Load prompts
+        system_prompt = self.prompt_manager.get_system_prompt()
+        state_prompt = self.prompt_manager.get_state_prompt(current_state)
 
-        # Build conversation history
-        conversation_context = "\n".join(
-            f"User: {msg['user']}\nAISLE: {msg['ai']}" for msg in history
-        )
+        # Build message history for LLM
+        messages = [
+            {"role": "system", "content": system_prompt + "\n\n" + state_prompt}
+        ]
 
-        # Determine if this is the first message
-        if not user_message:
-            # No user input -> send introduction + first question
-            full_prompt = (
-                f"{system_prompt}\n\n"
-                f"{conversation_context}\n\n"
-                f"--- AISLE Introduction & First Question ---\n"
-                f"User has not responded yet.\n"
-                f"AISLE:"
-            )
-        else:
-            # Normal onboarding step
-            full_prompt = (
-                f"{system_prompt}\n\n"
-                f"{conversation_context}\n\n"
-                f"--- New User Message ---\n"
-                f"{user_message}\n\n"
-                f"AISLE:"
-            )
+        # Add conversation history
+        for entry in self.sessions.get_history(user_id):
+            messages.append({"role": "user", "content": entry["user"]})
+            messages.append({"role": "assistant", "content": entry["ai"]})
 
-        # Call the LLM
-        ai_response = self.llm.generate(full_prompt)
+        # Add current user message
+        messages.append({"role": "user", "content": user_msg})
 
-        # Parse response into English + Finnish
-        english, finnish = "", ""
-        for line in ai_response.splitlines():
-            if line.lower().startswith("english:"):
-                english = line.split(":", 1)[1].strip()
-            elif line.lower().startswith("finnish:"):
-                finnish = line.split(":", 1)[1].strip()
+        # Call the AI model
+        raw_output = self.llm.generate(messages)
 
-        return {
-            "english": english,
-            "finnish": finnish,
-            "raw": ai_response
-        }
+        # Parse response
+        json_output = parse_ai_response(raw_output)
+
+        # Update session
+        self.sessions.set_state(user_id, json_output.get("state", current_state))
+        self.sessions.update_history(user_id, user_msg, json_output.get("finnish", ""))
+
+        return json_output

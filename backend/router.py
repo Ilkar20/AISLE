@@ -1,35 +1,21 @@
-# router.py
 from flask import Blueprint, request, jsonify
-from conversation_service import generate_ai_response
-from session_manager import create_session, get_session, update_session
+from conversation_service import ConversationService
 
-bp = Blueprint("aisle_bp", __name__)
+chat_router = Blueprint("chat_router", __name__)
+conversation_service = ConversationService()
 
-@bp.route("/chat", methods=["POST"])
+@chat_router.route("/chat", methods=["POST"])
 def chat():
-    data = request.json
-    session_id = data.get("session_id")
-    message = data.get("message", "")
+    """
+    Receives a user message, returns AI response in JSON.
+    Expected JSON payload: { "user_id": "...", "message": "..." }
+    """
+    data = request.get_json()
+    user_id = data.get("user_id")
+    message = data.get("message")
 
-    # Create session if none
-    if not session_id:
-        session_id = create_session()
+    if not user_id or not message:
+        return jsonify({"error": "Missing user_id or message"}), 400
 
-    session = get_session(session_id)
-
-    # Generate AI prompt (simplified)
-    prompt = f"User state: {session['state']}. User says: {message}"
-
-    ai_reply = generate_ai_response(prompt, session_id)
-
-    # Update session (example: advance state if onboarding done)
-    if session['state'] == "onboarding":
-        session['state'] = "theme_selection"
-
-    update_session(session_id, session)
-
-    return jsonify({
-        "session_id": session_id,
-        "state": session['state'],
-        "reply": ai_reply
-    })
+    response = conversation_service.handle_message(user_id, message)
+    return jsonify(response)
