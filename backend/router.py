@@ -1,7 +1,10 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, Response
+import json
 from conversation_service import ConversationService
 
 chat_router = Blueprint("chat_router", __name__)
+# Backwards-compatible name used by app.py so app.register_blueprint(router) works
+router = chat_router
 conversation_service = ConversationService()
 
 @chat_router.route("/chat", methods=["POST"])
@@ -14,8 +17,7 @@ def chat():
     user_id = data.get("user_id")
     message = data.get("message")
 
-    if not user_id or not message:
-        return jsonify({"error": "Missing user_id or message"}), 400
-
     response = conversation_service.handle_message(user_id, message)
-    return jsonify(response)
+    # Use ensure_ascii=False to preserve non-ascii characters (ä, ö, å) in output
+    payload = json.dumps(response, ensure_ascii=False)
+    return Response(payload, mimetype="application/json; charset=utf-8")
