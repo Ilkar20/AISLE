@@ -4,14 +4,14 @@ class PromptManager:
     def __init__(self, templates_dir="prompts"):
         self.templates_dir = templates_dir
         self.state_to_prompt = {
-            "ONBOARDING": "onboarding_prompt.txt",
-            "THEME_SELECTION": "theme_prompt.txt",
-            "SITUATION_SELECTION": "situation_prompt.txt",
-            "EXERCISE": "exercise_prompt.txt",
-            "FEEDBACK": "feedback_prompt.txt",
-            "DASHBOARD": "dashboard_prompt.txt"
+            "ONBOARDING": "onboarding.txt",
+            "THEME_SELECTION": "theme.txt",
+            "SITUATION_SELECTION": "situation.txt",
+            "EXERCISE": "exercise.txt",
+            "FEEDBACK": "feedback.txt",
+            "DASHBOARD": "dashboard.txt"
         }
-        self.system_base = self.load_template("system_base.txt")
+        self.system_base = self.load_template("onboarding.txt")
 
     def load_template(self, filename):
         path = os.path.join(self.templates_dir, filename)
@@ -33,6 +33,3 @@ class PromptManager:
         if not filename:
             return ""
         return self.load_template(filename)
-
-    def get_system_prompt(self):
-        return self.system_base

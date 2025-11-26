@@ -36,15 +36,16 @@ class ConversationService:
         print(f"User {user_id} in state {current_state}")
 
         # Load prompts
-        system_prompt = self.prompt_manager.get_system_prompt()
         state_prompt = self.prompt_manager.get_state_prompt(current_state)
+        print(f"Loaded prompt for state {current_state}")
+        print(state_prompt)
 
         # Build message history for LLM
         messages = [
-            {"role": "system", "content": system_prompt + "\n\n" + state_prompt}
+            {"role": "system", "content": state_prompt}
         ]
 
-        print(f"System prompt for state {current_state}:\n{system_prompt}\n\n{state_prompt}")
+        print(f"System prompt for state {current_state}:{state_prompt}")
 
         # Add conversation history
         for entry in self.sessions.get_history(user_id):

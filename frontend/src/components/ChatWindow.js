@@ -53,5 +53,31 @@ export function ChatWindow() {
   container.appendChild(chatBox);
   container.appendChild(inputArea);
 
+  // Send an initial request automatically when the chat window is shown
+  (async function sendInitialRequest() {
+    const thinking = ThinkingBubble();
+    chatBox.appendChild(thinking);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    try {
+      // Send an empty message to trigger the assistant's initial reply
+      const aiReply = await sendMessageToBackend("");
+
+      const bubble = document.getElementById("thinking-bubble");
+      if (bubble) bubble.remove();
+
+      const aiMsg = MessageBubble(aiReply, "ai");
+      chatBox.appendChild(aiMsg);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    } catch (error) {
+      const errorMsg = MessageBubble(
+        "⚠️ Unable to reach AI service. Please try again later.",
+        "ai"
+      );
+      chatBox.appendChild(errorMsg);
+      console.error("Chat initial request error:", error);
+    }
+  })();
+
   return container;
 }

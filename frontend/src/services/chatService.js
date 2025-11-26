@@ -1,6 +1,7 @@
 // services/chatService.js
 
-const API_URL = "http://127.0.0.1:5000/api/chat";
+// Backend's chat route (matches backend/router.py which serves /chat)
+const API_URL = "http://127.0.0.1:5000/chat";
 
 export async function sendMessageToBackend(message) {
   try {
@@ -11,13 +12,27 @@ export async function sendMessageToBackend(message) {
     });
 
     if (!response.ok) {
-      throw new Error(`Server error: ${response.status}`);
+      // Try to extract any helpful error text from the server for diagnostics
+      const text = await response.text().catch(() => "");
+      const errMsg = text ? `${response.status} ${text}` : `Server error: ${response.status}`;
+      throw new Error(errMsg);
     }
 
     const data = await response.json();
-    return data.reply || "No response from AI.";
+
+    // Normalize server response into a consistent object shape
+    // Backend normally returns { english, finnish, state }
+    const result = {
+      english: (data && data.english) || "",
+      finnish: (data && data.finnish) || (data && data.reply) || "",
+      state: (data && data.state) || "",
+      raw: data,
+    };
+
+    return result;
   } catch (error) {
+    // Provide a more informative message for debugging while keeping user-friendly text short
     console.error("Error communicating with backend:", error);
-    return "⚠️ Unable to reach AI server. Please try again later.";
+    return { english: `⚠️ Unable to reach AI server. (${error.message || 'network error'})`, finnish: "", state: "", raw: null };
   }
 }
