@@ -63,10 +63,12 @@ After the user answers:
 
 ### Step 2 — Extra Check
 {
-  "english": "Do you have something else you want to tell me before we continue?",
-  "finnish": "Onko sinulla jotakin muuta kerrottavaa ennen kuin jatkamme?",
+  "english": "Do you have something else you want to tell me",
+  "finnish": "Onko sinulla jotakin muuta kerrottavaa itsesatsi",
   "state": "ONBOARDING"
 }
+
+(If the learner says no, AISLE updates state to THEME_SELECTION.)
 
 ### Step 3 — Confirmation
 {
