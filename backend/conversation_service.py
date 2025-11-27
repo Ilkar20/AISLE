@@ -40,8 +40,7 @@ class ConversationService:
                 "Generate the first question asking the user's Finnish language level (A0, A1, A2, B1). "
                 "End with a guiding question."
             )
-            history.append({"role": "system", "content": self.master_prompt})
-            history.append({"role": "user", "content": bootstrap_instruction})     
+            history.append({"role": "system", "content": bootstrap_instruction})     
         else:
             # Add current user message if provided
             if user_msg:
