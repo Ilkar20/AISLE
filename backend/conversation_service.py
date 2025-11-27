@@ -2,20 +2,52 @@ import os
 import json
 import uuid
 from llm.openrouter_client import OpenRouterClient
-from prompt_manager import PromptManager
 from session_manager import RedisSessionManager  
 from utils.parser import parse_ai_response  
 
 class ConversationService:
     def __init__(self):
         self.llm = OpenRouterClient()
-        # canonical attribute name used elsewhere in code
-        self.prompt_manager = PromptManager()
-        # keep the older `prompts` name for backwards compatibility
-        self.prompts = self.prompt_manager
         self.sessions = RedisSessionManager()
 
-    
+        # Load the master AISLE prompt once at initialization
+        # You can keep this in a file (e.g., prompts/aisle_master.txt)
+        with open("prompts/aisle_master.txt", "r", encoding="utf-8") as f:
+            self.master_prompt = f.read()
+
+    def start_conversation(self, user_id=None):
+        """
+        Start a new conversation in the ONBOARDING state.
+        Generate the first question: ask the user's Finnish language level.
+        """
+
+        # Auto-generate user_id if not provided
+        if not user_id:
+            user_id = str(uuid.uuid4())
+            self.sessions.get_session(user_id)  # initialize session
+
+        # Explicitly tell the AI it is in ONBOARDING state
+        system_message = self.master_prompt + "\n\n" + \
+            "You are now in the ONBOARDING state. " \
+            "Generate the first question asking the user's Finnish language level (A0, A1, A2, B1). " \
+            "End with a guiding question."
+
+        messages = [
+            {"role": "system", "content": system_message}
+        ]
+
+        # Call the AI model
+        raw_output = self.llm.generate(messages)
+
+        # Parse response
+        json_output = parse_ai_response(raw_output)
+
+        # Initialize session state and history
+        self.sessions.set_state(user_id, json_output.get("state", "ONBOARDING"))
+        self.sessions.update_history(user_id, "", json_output.get("finnish", ""))
+
+        return user_id, json_output
+
     def handle_message(self, user_id, user_msg):
         """
         Handle user message:
@@ -35,22 +67,17 @@ class ConversationService:
         current_state = self.sessions.get_state(user_id)
         print(f"User {user_id} in state {current_state}")
 
-        # Load prompts
-        state_prompt = self.prompt_manager.get_state_prompt(current_state)
-        print(f"Loaded prompt for state {current_state}")
-        print(state_prompt)
-
         # Build message history for LLM
         messages = [
-            {"role": "system", "content": state_prompt}
+            {"role": "system", "content": self.master_prompt}
         ]
-
-        print(f"System prompt for state {current_state}:{state_prompt}")
 
         # Add conversation history
         for entry in self.sessions.get_history(user_id):
-            messages.append({"role": "user", "content": entry["user"]})
-            messages.append({"role": "assistant", "content": entry["ai"]})
+            if entry["user"]:
+                messages.append({"role": "user", "content": entry["user"]})
+            if entry["ai"]:
+                messages.append({"role": "assistant", "content": entry["ai"]})
 
         # Add current user message
         messages.append({"role": "user", "content": user_msg})
