@@ -11,85 +11,56 @@ class ConversationService:
         self.sessions = RedisSessionManager()
 
         # Load the master AISLE prompt once at initialization
-        # You can keep this in a file (e.g., prompts/aisle_master.txt)
         with open("prompts/aisle_master.txt", "r", encoding="utf-8") as f:
             self.master_prompt = f.read()
 
-    def start_conversation(self, user_id=None):
+    def handle_message(self, user_msg=None):
         """
-        Start a new conversation in the ONBOARDING state.
-        Generate the first question: ask the user's Finnish language level.
-        """
-
-        # Auto-generate user_id if not provided
-        if not user_id:
-            user_id = str(uuid.uuid4())
-            self.sessions.get_session(user_id)  # initialize session
-
-        # Explicitly tell the AI it is in ONBOARDING state
-        system_message = self.master_prompt + "\n\n" + \
-            "You are now in the ONBOARDING state. " \
-            "Generate the first question asking the user's Finnish language level (A0, A1, A2, B1). " \
-            "End with a guiding question."
-
-        messages = [
-            {"role": "system", "content": system_message}
-        ]
-
-        # Call the AI model
-        raw_output = self.llm.generate(messages)
-
-        # Parse response
-        json_output = parse_ai_response(raw_output)
-
-        # Initialize session state and history
-        self.sessions.set_state(user_id, json_output.get("state", "ONBOARDING"))
-        self.sessions.update_history(user_id, "", json_output.get("finnish", ""))
-
-        return user_id, json_output
-
-    def handle_message(self, user_id, user_msg):
-        """
-        Handle user message:
-        - Build AI prompt based on user state
-        - Call model
-        - Parse response
-        - Validate
-        - Update session
+        Handle user message or bootstrap a new conversation:
+        - If no history and no user_msg, generate the first onboarding question.
+        - Otherwise, continue the conversation based on state and history.
         """
 
-        # Auto-generate user_id if not provided
-        if not user_id:
-            user_id = str(uuid.uuid4())
-            self.sessions.get_session(user_id)  # initialize session
+        # We only keep a single server-side session (no per-user ids)
+        session_id = "default"
+        self.sessions.get_session(session_id)  # initialize session (idempotent)
 
         # Get current state
-        current_state = self.sessions.get_state(user_id)
-        print(f"User {user_id} in state {current_state}")
+        current_state = self.sessions.get_state(session_id)
+        print(f"Session {session_id} in state {current_state}")
 
         # Build message history for LLM
-        messages = [
-            {"role": "system", "content": self.master_prompt}
-        ]
+        history = self.sessions.get_history(session_id)
+        print(f"History for session {session_id}: {history}")
 
-        # Add conversation history
-        for entry in self.sessions.get_history(user_id):
-            if entry["user"]:
-                messages.append({"role": "user", "content": entry["user"]})
-            if entry["ai"]:
-                messages.append({"role": "assistant", "content": entry["ai"]})
-
-        # Add current user message
-        messages.append({"role": "user", "content": user_msg})
+        # If no user message and no history → bootstrap first onboarding question
+        if not history:
+            bootstrap_instruction = (
+                "You are now in the ONBOARDING state. "
+                "Generate the first question asking the user's Finnish language level (A0, A1, A2, B1). "
+                "End with a guiding question."
+            )
+            history.append({"role": "system", "content": self.master_prompt})
+            history.append({"role": "user", "content": bootstrap_instruction})     
+        else:
+            # Add current user message if provided
+            if user_msg:
+                history.append({"role": "user", "content": user_msg})
 
         # Call the AI model
-        raw_output = self.llm.generate(messages)
+        raw_output = self.llm.generate(history)
 
         # Parse response
         json_output = parse_ai_response(raw_output)
 
-        # Update session
-        self.sessions.set_state(user_id, json_output.get("state", current_state))
-        self.sessions.update_history(user_id, user_msg, json_output.get("finnish", ""))
+        # Update session state (ignore empty/falsey states coming from LLM)
+        new_state = json_output.get("state")
+        if new_state != current_state:
+            print(f"Updating state for session {session_id}: {current_state} -> {new_state}")
+        self.sessions.set_state(session_id, new_state)
 
+        # Update history
+        self.sessions.update_history(session_id, user_msg, )
+
+        # Return parsed AI output (no user_id) — single-session app
         return json_output

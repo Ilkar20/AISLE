@@ -9,6 +9,7 @@ class RedisSessionManager:
     """
     Session manager using Redis.
     Stores state and conversation history.
+    Single-session only (no user_id required).
     """
 
     def __init__(self):
@@ -21,37 +22,36 @@ class RedisSessionManager:
             decode_responses=True,  # ensures ä, ö, å display correctly
         )
         self.SESSION_TTL = int(os.getenv("SESSION_TTL", 86400))  # default 24h
+        self.SESSION_KEY = "session:default"
 
-    def _session_key(self, user_id):
-        return f"session:{user_id}"
-
-    def get_session(self, user_id):
-        key = self._session_key(user_id)
-        raw = self.redis.get(key)
-
+    def get_session(self):
+        raw = self.redis.get(self.SESSION_KEY)
         if raw:
             return json.loads(raw)
 
-        session = {"state": "onboarding", "history": []}
-        self.redis.set(key, json.dumps(session, ensure_ascii=False), ex=self.SESSION_TTL)
+        # initialize with canonical uppercase state
+        session = {"state": "ONBOARDING", "history": []}
+        self.redis.set(self.SESSION_KEY, json.dumps(session, ensure_ascii=False), ex=self.SESSION_TTL)
         return session
 
-    def save_session(self, user_id, session):
-        key = self._session_key(user_id)
-        self.redis.set(key, json.dumps(session, ensure_ascii=False), ex=self.SESSION_TTL)
+    def save_session(self, session):
+        self.redis.set(self.SESSION_KEY, json.dumps(session, ensure_ascii=False), ex=self.SESSION_TTL)
 
-    def update_history(self, user_id, user_msg, ai_msg):
-        session = self.get_session(user_id)
+    def update_history(self, user_msg=None, ai_msg=None):
+        session = self.get_session()
         session["history"].append({"user": user_msg, "ai": ai_msg})
-        self.save_session(user_id, session)
+        self.save_session(session)
 
-    def set_state(self, user_id, state):
-        session = self.get_session(user_id)
-        session["state"] = state
-        self.save_session(user_id, session)
+    def set_state(self, state):
+        session = self.get_session()
+        if state:
+            session["state"] = state.upper()
+        else:
+            session["state"] = session.get("state", "ONBOARDING")
+        self.save_session(session)
 
-    def get_state(self, user_id):
-        return self.get_session(user_id)["state"]
+    def get_state(self):
+        return self.get_session()["state"]
 
-    def get_history(self, user_id):
-        return self.get_session(user_id)["history"]
+    def get_history(self):
+        return self.get_session()["history"]

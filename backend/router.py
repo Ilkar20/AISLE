@@ -11,13 +11,13 @@ conversation_service = ConversationService()
 def chat():
     """
     Receives a user message, returns AI response in JSON.
-    Expected JSON payload: { "user_id": "...", "message": "..." }
+    Expected JSON payload: { "message": "..." }
+    Note: single-session mode — no user_id required.
     """
-    data = request.get_json()
-    user_id = data.get("user_id")
+    data = request.get_json() or {}
     message = data.get("message")
 
-    response = conversation_service.handle_message(user_id, message)
+    response = conversation_service.handle_message(message)
     # Use ensure_ascii=False to preserve non-ascii characters (ä, ö, å) in output
     payload = json.dumps(response, ensure_ascii=False)
     return Response(payload, mimetype="application/json; charset=utf-8")

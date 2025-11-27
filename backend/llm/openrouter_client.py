@@ -7,9 +7,12 @@ from config import Config
 class OpenRouterClient:
     BASE_URL = Config.OPENROUTER_URL
 
-    def __init__(self, api_key=None, model=None):
-        self.api_key = api_key or Config.OPENROUTER_API_KEY
-        self.model = model or Config.OPENROUTER_MODEL
+    def __init__(self):
+        self.api_key = Config.OPENROUTER_API_KEY
+        self.model = Config.OPENROUTER_MODEL
+        
+        with open("prompts/aisle_master.txt", "r", encoding="utf-8") as f:
+            self.master_prompt = f.read()
 
         if not self.api_key:
             raise ValueError("OPENROUTER_API_KEY is missing in environment variables.")
@@ -32,14 +35,10 @@ class OpenRouterClient:
 
         # Build body depending on whether caller passed a plain prompt or
         # a prepared list of messages.
-        if isinstance(prompt_or_messages, list):
-            messages = prompt_or_messages
-        else:
-            # assume string
-            messages = [
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": str(prompt_or_messages)}
-            ]
+        messages = [
+            {"role": "system", "content": self.master_prompt},
+        ]
+        messages.append(prompt_or_messages)
 
         body = {"model": self.model, "messages": messages}
 
@@ -53,8 +52,6 @@ class OpenRouterClient:
             raise Exception(f"OpenRouter error: {response.text}")
 
         data = response.json()
-        # Debug prints are useful while developing, but keep them minimal.
-        print(data)
 
         try:
             return data["choices"][0]["message"]["content"]
