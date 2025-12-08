@@ -2,8 +2,6 @@ import requests
 import json
 from config import Config
 
-
-
 class OpenRouterClient:
     BASE_URL = Config.OPENROUTER_URL
 
@@ -18,12 +16,10 @@ class OpenRouterClient:
             raise ValueError("OPENROUTER_API_KEY is missing in environment variables.")
 
     def generate(self, prompt_or_messages) -> str:
-        """Send a message (string) or pre-built messages list to OpenRouter and
-        return the raw text response.
-
+        """
         Accepts either:
-          - prompt_or_messages: str -> will be wrapped into a basic messages list
-          - prompt_or_messages: list[dict] -> used directly as "messages" payload
+          - str: will be wrapped into a basic messages list
+          - list[dict]: used directly as "messages" payload
         """
 
         headers = {
@@ -33,19 +29,30 @@ class OpenRouterClient:
             "X-Title": "Aisle Assistant",
         }
 
-        # Build body depending on whether caller passed a plain prompt or
-        # a prepared list of messages.
-        messages = [
-            {"role": "system", "content": self.master_prompt},
-        ]
-        messages.append(prompt_or_messages)
+        # Normalize messages
+        if isinstance(prompt_or_messages, str):
+            messages = [
+                {"role": "system", "content": self.master_prompt},
+                {"role": "user", "content": prompt_or_messages},
+            ]
+        elif isinstance(prompt_or_messages, list):
+            normalized = []
+            for msg in prompt_or_messages:
+                if isinstance(msg, dict) and "role" in msg and "content" in msg:
+                    normalized.append(msg)
+                else:
+                    # fallback: wrap raw strings or malformed entries
+                    normalized.append({"role": "user", "content": str(msg)})
+            messages = [{"role": "system", "content": self.master_prompt}] + normalized
+        else:
+            raise TypeError("prompt_or_messages must be str or list[dict]")
 
         body = {"model": self.model, "messages": messages}
 
         response = requests.post(
             self.BASE_URL,
-            headers = headers,
-            data = json.dumps(body)
+            headers=headers,
+            json=body
         )
 
         if response.status_code != 200:
@@ -57,4 +64,3 @@ class OpenRouterClient:
             return data["choices"][0]["message"]["content"]
         except (KeyError, IndexError):
             raise Exception(f"Unexpected OpenRouter response shape: {data}")
-

@@ -1,65 +1,69 @@
-import os
-import json
-import uuid
 from llm.openrouter_client import OpenRouterClient
-from session_manager import RedisSessionManager  
-from utils.parser import parse_ai_response  
+from session_manager import RedisSessionManager
+from utils.parser import parse_ai_response
 
 class ConversationService:
-    def __init__(self):
+    def __init__(self, session_id):
+        """
+        ConversationService requires an explicit session_id.
+        This ensures you can reconnect to the same Redis session later.
+        """
         self.llm = OpenRouterClient()
-        self.sessions = RedisSessionManager()
+        self.sessions = RedisSessionManager(session_id)
 
-        # Load the master AISLE prompt once at initialization
-        with open("prompts/aisle_master.txt", "r", encoding="utf-8") as f:
-            self.master_prompt = f.read()
+        existing = self.sessions.get_session()
+        if not existing or "memory" not in existing:
+            self.sessions.init_session()
 
     def handle_message(self, user_msg=None):
         """
         Handle user message or bootstrap a new conversation:
         - If no history and no user_msg, generate the first onboarding question.
-        - Otherwise, continue the conversation based on state and history.
+        - Otherwise, continue the conversation based on history.
         """
 
-        # We only keep a single server-side session (no per-user ids)
-        session_id = "default"
-        self.sessions.get_session(session_id)  # initialize session (idempotent)
+        # Retrieve full session object
+        session = self.sessions.get_session()
+        memory = session.get("memory", [])
+        print(f"History for session {self.sessions.session_id}: {memory}")
 
-        # Get current state
-        current_state = self.sessions.get_state(session_id)
-        print(f"Session {session_id} in state {current_state}")
+        # Global schema enforcement instruction
+        schema_instruction = (
+            "You are AISLE, a Finnish tutor. Always respond ONLY in JSON with keys: "
+            "{'english': <English reply>, 'finnish': <Finnish reply>, 'state': <FSM state>}."
+            " End with a guiding question."
+        )
 
-        # Build message history for LLM
-        history = self.sessions.get_history(session_id)
-        print(f"History for session {session_id}: {history}")
-
-        # If no user message and no history → bootstrap first onboarding question
-        if not history:
-            bootstrap_instruction = (
-                "You are now in the ONBOARDING state. "
+        # Bootstrap if empty
+        if not memory:
+            first_question = (
+                "You are now in the ONBOARDING phase. "
                 "Generate the first question asking the user's Finnish language level (A0, A1, A2, B1). "
-                "End with a guiding question."
             )
-            history.append({"role": "system", "content": bootstrap_instruction})     
-        else:
-            # Add current user message if provided
-            if user_msg:
-                history.append({"role": "user", "content": user_msg})
+            memory.append({"role": "system", "content": first_question})
+            memory.append({"role": "system", "content": schema_instruction})
+        elif user_msg and user_msg.strip():
+            # Append user message cleanly
+            memory.append({"role": "user", "content": user_msg.strip()})
+            # Reinforce schema instruction separately
+            memory.append({"role": "system", "content": schema_instruction})
 
-        # Call the AI model
-        raw_output = self.llm.generate(history)
+        print(f"Sending to LLM for session {self.sessions.session_id}: {memory}")
+        raw_output = self.llm.generate(memory)   # pass list[dict]
+        print(f"Raw LLM output for session {self.sessions.session_id}: {raw_output}")
 
         # Parse response
         json_output = parse_ai_response(raw_output)
+        print(f"LLM output for session {self.sessions.session_id}: {json_output}")
 
-        # Update session state (ignore empty/falsey states coming from LLM)
-        new_state = json_output.get("state")
-        if new_state != current_state:
-            print(f"Updating state for session {session_id}: {current_state} -> {new_state}")
-        self.sessions.set_state(session_id, new_state)
+        # Append assistant reply (English text for history readability)
+        ai_response = json_output.get("english")
+        if ai_response:
+            memory.append({"role": "assistant", "content": ai_response})
 
-        # Update history
-        self.sessions.update_history(session_id, user_msg, )
+        # Save updated session back to Redis
+        session["memory"] = memory
+        self.sessions.save_session(session)
 
-        # Return parsed AI output (no user_id) — single-session app
+        # Return parsed AI output
         return json_output
