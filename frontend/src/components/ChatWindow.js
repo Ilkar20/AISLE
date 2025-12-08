@@ -1,6 +1,6 @@
 import { InputBox } from "./InputBox";
 import { MessageBubble } from "./MessageBubble";
-import { ThinkingBubble} from "./ThinkingBubble"
+import { ThinkingBubble } from "./ThinkingBubble";
 import { sendMessageToBackend } from "../services/chatService.js";
 
 export function ChatWindow() {
@@ -14,17 +14,24 @@ export function ChatWindow() {
   const inputArea = document.createElement("div");
   inputArea.className = "input-area";
 
-  const inputBox = InputBox(async (message) => {
+  // helper to scroll the whole page to bottom
+  function scrollToBottom() {
+    window.scrollTo({
+      top: document.body.scrollHeight,
+      behavior: "smooth"
+    });
+  }
 
+  const inputBox = InputBox(async (message) => {
     // Append user's message
     const userMsg = MessageBubble(message, "user");
     chatBox.appendChild(userMsg);
-    chatBox.scrollTop = chatBox.scrollHeight;
+    scrollToBottom();
 
     const thinking = ThinkingBubble();
     chatBox.appendChild(thinking);
-    chatBox.scrollTop = chatBox.scrollHeight;
-        
+    scrollToBottom();
+
     try {
       // Send message to backend and get response
       const aiReply = await sendMessageToBackend(message);
@@ -35,7 +42,7 @@ export function ChatWindow() {
       // Append AI response message
       const aiMsg = MessageBubble(aiReply, "ai");
       chatBox.appendChild(aiMsg);
-      chatBox.scrollTop = chatBox.scrollHeight;
+      scrollToBottom();
 
     } catch (error) {
       // Handle network/backend errors gracefully
@@ -44,6 +51,7 @@ export function ChatWindow() {
         "ai"
       );
       chatBox.appendChild(errorMsg);
+      scrollToBottom();
       console.error("Chat error:", error);
     }
   });
@@ -57,7 +65,7 @@ export function ChatWindow() {
   (async function sendInitialRequest() {
     const thinking = ThinkingBubble();
     chatBox.appendChild(thinking);
-    chatBox.scrollTop = chatBox.scrollHeight;
+    scrollToBottom();
 
     try {
       // Send an empty message to trigger the assistant's initial reply
@@ -68,13 +76,14 @@ export function ChatWindow() {
 
       const aiMsg = MessageBubble(aiReply, "ai");
       chatBox.appendChild(aiMsg);
-      chatBox.scrollTop = chatBox.scrollHeight;
+      scrollToBottom();
     } catch (error) {
       const errorMsg = MessageBubble(
         "⚠️ Unable to reach AI service. Please try again later.",
         "ai"
       );
       chatBox.appendChild(errorMsg);
+      scrollToBottom();
       console.error("Chat initial request error:", error);
     }
   })();

@@ -5,8 +5,7 @@ body {
   font-family: Arial, sans-serif;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  height: 100vh;
+  min-height: 100vh;
 }
 
 
@@ -78,45 +77,42 @@ body {
 .chat-container {
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
-  height: 100vh;
   padding-bottom: 20px;
   transition: all 0.3s ease;
-  /* make the chat area approximately 50% of the viewport width */
-  width: 50vw; /* ~50% of browser viewport */
-  max-width: 1000px; /* cap the size */
-  min-width: 360px; /* avoid being too small on narrow laptop screens */
-  margin: 0 auto; /* horizontally center */
-  align-items: stretch; /* allow child elements (chat-box, input-area) to fill full width */
+  width: 50vw;
+  max-width: 1000px;
+  min-width: 360px;
+  margin: 20px auto;
+  align-items: stretch;
 }
-
 
 .chat-box {
   display: flex;
-  flex-grow: 1;
-  /* fill the full width of the parent chat-container */
-  width: 100%;
-  max-width: 100%;
   flex-direction: column;
   align-items: flex-start;
+  gap: 14px;
   padding: 10px 0;
-  /* Add vertical spacing (an empty line) between consecutive message bubbles */
-  gap: 14px; /* adjust this value to increase/decrease spacing */
-  flex-grow: 1;
   margin-top: 20px;
+  flex-grow: 1;
+  width: 100%;
+  max-width: 100%;
 }
 
 .input-area {
-  bottom: 20px;
+  position: fixed;
+  bottom: 20px;          /* distance from bottom of screen */
+  left: 50%;             /* center horizontally */
+  transform: translateX(-50%);
+  width: 50vw;           /* match your chat-container width */
+  max-width: 1000px;
+  min-width: 360px;
   display: flex;
   justify-content: center;
-  width: 100%;
   transition: all 0.3s ease;
 }
 
 .input-box {
-  /* make input match the width of the chat-area */
   width: 100%;
   max-width: 100%;
   display: flex;

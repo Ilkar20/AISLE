@@ -71,7 +71,7 @@ THEME_SELECTION
 SITUATION_SELECTION
 - Present simple situations within chosen theme (e.g., Morning wash, Meal time, Giving medicine).
 - Ask learner to choose one.
-- End with a question (e.g., “Which situation sounds useful for you?”).
+- End with a question (for examples “Which situation sounds useful for you?”).
 - After choice → move to EXERCISE.
 
 EXERCISE
