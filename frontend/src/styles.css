@@ -93,6 +93,7 @@ body {
   align-items: flex-start;
   gap: 14px;
   padding: 10px 0;
+  padding-bottom: 200px;
   margin-top: 20px;
   flex-grow: 1;
   width: 100%;
@@ -259,6 +260,8 @@ body {
 
   .chat-box {
     width: 100%;
+    /* on small screens, reduce bottom padding so there's less empty space */
+    padding-bottom: 100px;
   }
 
   .input-box {

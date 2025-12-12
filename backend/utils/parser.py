@@ -36,8 +36,23 @@ def parse_ai_response(ai_response_text):
     finnish = result.get("finnish", "")
     state = result.get("state", "")
 
+    # If the parser couldn't extract any of the expected fields,
+    # fall back to returning the raw LLM output so the frontend can
+    # display something useful to the user instead of empty strings.
+    if not (english or finnish or state):
+        # Prefer a trimmed raw text (preserve utf-8)
+        raw_text = ai_response_text.encode("utf-8", "ignore").decode("utf-8").strip()
+        # Put the raw text into `english` so existing UI shows it.
+        return {
+            "english": raw_text,
+            "finnish": "",
+            "state": "",
+            "raw": raw_text,
+        }
+
     return {
         "english": english,
         "finnish": finnish,
-        "state": state
+        "state": state,
+        "raw": result,
     }

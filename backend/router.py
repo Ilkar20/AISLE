@@ -15,7 +15,7 @@ def chat():
     """
     data = request.get_json() or {}
     message = data.get("message")
-    session_id = data.get("session_id", "test1")
+    session_id = data.get("session_id", "session2")
 
     service = ConversationService(session_id)
     response = service.handle_message(message)
