@@ -1,12 +1,8 @@
 import os
 from dotenv import load_dotenv
 
-# Try to load common env files: first " .env " then fallback to "env" if present.
-# Many repos use a file named `env` by mistake — we'll load both so the app works
-# either way.
-load_dotenv()  # default looks for a .env file in cwd
+load_dotenv()
 
-# Fallback: attempt to load a plain `env` file in the project directory
 project_env = os.path.join(os.path.dirname(__file__), "env")
 if os.path.exists(project_env):
     load_dotenv(dotenv_path=project_env, override=False)
@@ -19,12 +15,9 @@ class Config:
 
     @staticmethod
     def require_keys():
-        """Raise a helpful error if a required env var is missing.
-
-        This isn't invoked automatically anywhere in the codebase; callers
-        can use it to get a clear, actionable message about missing variables.
+        """Raise a error if a required env var is missing.
         """
         if not Config.OPENROUTER_API_KEY:
             raise EnvironmentError(
-                "OPENROUTER_API_KEY is missing. Set it in the environment or in a .env (or env) file."
+                "OPENROUTER_API_KEY is missing. Set it in the environment or in a .env file."
             )

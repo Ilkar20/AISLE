@@ -8,7 +8,6 @@ def safe_extract_json(text):
     """
     text = text.encode("utf-8", "ignore").decode("utf-8")
 
-    # Try direct JSON first
     try:
         return json.loads(text)
     except:

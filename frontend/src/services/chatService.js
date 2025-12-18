@@ -1,6 +1,3 @@
-// services/chatService.js
-
-// Backend's chat route (matches backend/router.py which serves /chat)
 const API_URL = "http://127.0.0.1:5000/chat";
 
 export async function sendMessageToBackend(message) {
@@ -12,16 +9,14 @@ export async function sendMessageToBackend(message) {
     });
 
     if (!response.ok) {
-      // Try to extract any helpful error text from the server for diagnostics
+
       const text = await response.text().catch(() => "");
       const errMsg = text ? `${response.status} ${text}` : `Server error: ${response.status}`;
       throw new Error(errMsg);
     }
 
     const data = await response.json();
-
-    // Normalize server response into a consistent object shape
-    // Backend normally returns { english, finnish, state }
+    
     const result = {
       english: (data && data.english) || "",
       finnish: (data && data.finnish) || (data && data.reply) || "",

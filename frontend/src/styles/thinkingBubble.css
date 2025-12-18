@@ -1,0 +1,28 @@
+.thinking-bubble {
+  display: flex;
+  align-items: center;
+  background: #1b1b1b;
+  border-radius: 20px;
+  padding: 8px 14px;
+  font-size: 14px;
+}
+
+.thinking-bubble .dots {
+  display: flex;
+  margin-left: 5px;
+}
+
+.thinking-bubble .dots span {
+  opacity: 0.3;
+  animation: blink 1.4s infinite;
+}
+
+.thinking-bubble .dots span:nth-child(1) { animation-delay: 0s; }
+.thinking-bubble .dots span:nth-child(2) { animation-delay: 0.2s; }
+.thinking-bubble .dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes blink {
+  0% { opacity: 0.3; }
+  50% { opacity: 1; }
+  100% { opacity: 0.3; }
+}
