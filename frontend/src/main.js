@@ -1,7 +1,7 @@
 import { createIntroScreen } from "./components/IntroScreen";
 import { ChatWindow } from "./components/ChatWindow";
 import { render } from "./utils/dom";
-import "./styles.css";
+
 
 function showChat() {
     render(ChatWindow());
