@@ -3,3 +3,5 @@ flask-cors
 requests
 python-dotenv
 redis
+openai-whisper
+torch

@@ -1,5 +1,5 @@
 # routes/chat_routes.py
-from flask import Blueprint, request
+from flask import Blueprint, request, jsonify
 from controllers.chat_controller import process_chat
 
 chat_router = Blueprint("chat_router", __name__)
@@ -16,3 +16,9 @@ def chat():
     session_id = data.get("session_id", "session2")
 
     return process_chat(message, session_id)
+
+
+@chat_router.route("/health", methods=["GET"])
+def health():
+    """Basic health-check endpoint for diagnostics."""
+    return jsonify({"status": "ok"}), 200

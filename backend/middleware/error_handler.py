@@ -1,12 +1,8 @@
 # middleware/error_handler.py
-from fastapi.responses import JSONResponse
-from fastapi import Request
+from flask import jsonify
 
-async def catch_exceptions(request: Request, call_next):
-    try:
-        return await call_next(request)
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"error": str(e)}
-        )
+def register_error_handlers(app):
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        # You can log the exception here if needed
+        return jsonify({"error": str(e)}), 500

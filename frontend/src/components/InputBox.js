@@ -1,4 +1,6 @@
-export function InputBox(onSubmit) {
+import { AudioRecorder } from "./AudioRecorder";
+
+export function InputBox(onSubmit, onAudio) {
   const form = document.createElement("form");
   form.className = "input-box";
   form.id = "chat-form";
@@ -13,8 +15,16 @@ export function InputBox(onSubmit) {
   button.type = "submit";
   button.textContent = "Send";
 
-  form.appendChild(input);
-  form.appendChild(button);
+  // Audio recorder (appended between input and send button so it's near the send button)
+  if (typeof onAudio === "function") {
+    const recorder = AudioRecorder(onAudio);
+    form.appendChild(input);
+    form.appendChild(recorder);
+    form.appendChild(button);
+  } else {
+    form.appendChild(input);
+    form.appendChild(button);
+  }
 
   form.addEventListener("submit", (e) => {
     e.preventDefault();

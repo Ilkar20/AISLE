@@ -4,6 +4,7 @@ export function AudioRecorder(onRecord) {
     recorderContainer.id = "audio-recorder";
 
     const recordButton = document.createElement("button");
+    recordButton.type = "button"; // prevent form submit when inside the input form
     recordButton.id = "record-btn";
     recordButton.textContent = "Start Recording";
     recorderContainer.appendChild(recordButton);
