@@ -17,6 +17,7 @@ if platform.system() == "Windows":
 
 # --- Safe to import Whisper now ---
 import whisper
+import shutil
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +27,17 @@ def transcribe_audio(file_path: str) -> str:
     Runs entirely offline, free of API quota limits.
     """
 
+    # Normalize and validate path
+    file_path = os.path.abspath(file_path)
     if not os.path.exists(file_path):
         return "⚠️ Audio file not found."
+
+    # Whisper relies on ffmpeg being available on PATH for audio decoding
+    if shutil.which("ffmpeg") is None:
+        logger.error("ffmpeg not found in PATH; transcription requires ffmpeg")
+        return (
+            "⚠️ Transcription failed: 'ffmpeg' executable not found. "
+            "Install ffmpeg and ensure it's on your PATH (e.g., via Chocolatey: `choco install ffmpeg` or Winget).")
 
     try:
         # Load a small model for speed; use "small"/"medium"/"large" for better accuracy

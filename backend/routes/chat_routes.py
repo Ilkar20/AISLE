@@ -13,7 +13,8 @@ def chat():
     """
     data = request.get_json() or {}
     message = data.get("message")
-    session_id = data.get("session_id", "session2")
+    # Use truthy fallback so empty session_id values don't cause errors
+    session_id = data.get("session_id") or "session2"
 
     return process_chat(message, session_id)
 

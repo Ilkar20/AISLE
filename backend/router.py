@@ -15,7 +15,8 @@ def chat():
     """
     data = request.get_json() or {}
     message = data.get("message")
-    session_id = data.get("session_id", "session2")
+    # Use truthy fallback so an explicit empty session_id doesn't break session creation
+    session_id = data.get("session_id") or "session2"
 
     service = ConversationService(session_id)
     response = service.handle_message(message)
